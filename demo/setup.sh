@@ -21,4 +21,6 @@ cat >"$DIR/settings.json" <<JSON
 JSON
 # reuse your provider login so the header shows a real model
 [ -f "$HOME/.pi/agent/auth.json" ] && cp "$HOME/.pi/agent/auth.json" "$DIR/auth.json"
-echo "demo agent dir ready: PI_CODING_AGENT_DIR=$DIR pi --no-session"
+echo "demo agent dir ready. Run pi once so it installs the packages, then record:"
+echo "  PI_CODING_AGENT_DIR=$DIR pi --no-session"
+echo "  vhs demo/xray.tape"

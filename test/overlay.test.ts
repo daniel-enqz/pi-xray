@@ -199,6 +199,17 @@ test("space on a package cascades; Esc with pending asks first; second Esc close
 	assert.equal(result()?.action, "close");
 });
 
+test("a package with marked changes shows ↻ on its own row", () => {
+	const { view } = make({}, 30, PLAIN);
+	type(view, "release-kit");
+	view.handleInput(KEYS.home);
+	view.handleInput(" ");
+	const row = view.render(100).find((l) => l.includes("release-kit ("))!;
+	assert.match(row, /↻│$/, row);
+	view.handleInput(" ");
+	assert.doesNotMatch(view.render(100).find((l) => l.includes("release-kit ("))!, /↻│$/);
+});
+
 test("groups that are not packages cannot be toggled as a whole", () => {
 	const { view } = make({}, 30, PLAIN);
 	type(view, "~/.pi/agent");

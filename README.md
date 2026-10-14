@@ -2,35 +2,7 @@
 
 What is filling your [pi](https://pi.dev) context window, which package put it there, and how do you turn it off? `/xray` answers all three in one view, without sending anything to the model.
 
-<!-- demo: docs/demo.gif, recorded with demo/xray.tape -->
-
-```
-╭─ /xray ──────────────────────────────────────────────────────────────────────────── filter: all ─╮
-│                                                                                                  │
-│ ╭──────────────────────────────────────────────────────────────────────────────────────────────╮ │
-│ │  claude-opus-5-5 · 41.2k / 1.0M · 4.1% · 15 msgs · $1.82 · 3 packages · 7 skills             │ │
-│ │  █████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░                                            │ │
-│ │                                                                                              │ │
-│ │  █ base 11.5k  █ memory 914  █ skills 1.7k  █ tools 2.5k  █ msgs 24.6k  ░ free 958.8k        │ │
-│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
-│                                                                                                  │
-│  type    name                                        source                    tokens      %     │
-│  msgs    + messages (3)                                                         24.6k   2.5%     │
-│  pkg     + pi-mcp-adapter (1)                        npm                         1.1k   0.1%    ✓│
-│› pkg     - docs-search (4)                           local                       1.0k   0.1%    ✓│
-│  skill       search                                                               312   0.0%    ✓│
-│  skill             summarize                                                      284   0.0%    ✓│
-│  skill       sources                                                              226   0.0%    ✓│
-│  skill       index                                                                178   0.0%    ✓│
-│  mcp     + MCP (4)                                   /mcp                         914   0.1%  ! ✓│
-│  memory  + AGENTS.md / CLAUDE.md (1)                                              914   0.1%    ✓│
-│  user    + ~/.pi/agent (4)                                                        502   0.1%    ✓│
-│  pi      + built-in (4)                                                           394   0.0%    ~│
-├──────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ ✓ active   ↻ changes after reload   ~ partial   ! warning                                        │
-│ Esc close · space toggle · a apply · →← expand · / search · f filter · ⏎ open · e expand all     │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-```
+![pi-xray: expanding a package down to its tools, turning it off, and the context total dropping after the reload](https://raw.githubusercontent.com/daniel-enqz/pi-xray/main/docs/demo.gif)
 
 ## Install
 

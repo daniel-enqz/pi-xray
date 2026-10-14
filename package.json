@@ -34,7 +34,8 @@
   "pi": {
     "extensions": [
       "./src/index.ts"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/daniel-enqz/pi-xray/main/docs/demo.gif"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",

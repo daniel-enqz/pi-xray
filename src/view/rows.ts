@@ -171,7 +171,10 @@ export function buildRows(c: Catalog, st: ViewState): Row[] {
 		if (narrowing && !shown.length) continue;
 
 		const expanded = st.expanded.has(g.key) || (narrowing && shown.length > 0);
-		const state = g.kind === "messages" ? "none" : g.kind === "mcp" ? (items.some((r) => r.enabled) ? "on" : "off") : groupState(items, st.pending);
+		let state: State = g.kind === "messages" ? "none" : g.kind === "mcp" ? (items.some((r) => r.enabled) ? "on" : "off") : groupState(items, st.pending);
+		// a group with marked changes shows ↻ like its children, in the direction of the change
+		const pendingHere = items.filter((r) => st.pending.has(r.id));
+		if (pendingHere.length && g.kind !== "mcp" && g.kind !== "messages") state = pendingHere.some((r) => st.pending.get(r.id)) ? "entering" : "leaving";
 		rows.push({
 			type: "resource",
 			key: g.key,
