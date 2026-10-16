@@ -25,6 +25,12 @@ export type ToggleTarget =
 // ---------- input layers ----------
 
 export interface LiveData {
+	/**
+	 * Tokens per estimated token, saved by /xray when it applied changes. Only set
+	 * while no model reply has happened since: pi's usage total still describes the
+	 * prompt from before the reload, so it cannot be used as is.
+	 */
+	calibration?: number;
 	model: string;
 	contextWindow: number;
 	usageTokens: number;
@@ -38,7 +44,8 @@ export interface LiveData {
 		user: number;
 		assistant: number;
 		cost: number;
-		heavy: Array<{ tool: string; turn: number; chars: number }>;
+		/** detail: what the call did (the bash command, the file read...) */
+		heavy: Array<{ tool: string; detail?: string; turn: number; chars: number }>;
 	};
 }
 
@@ -112,6 +119,8 @@ export interface Header {
 	window: number;
 	total: number;
 	estimated: boolean;
+	/** tokens per estimated token used for every row (saved on apply, see LiveData.calibration) */
+	scale: number;
 	categories: Array<{ key: string; label: string; tokens: number }>;
 	messages: { user: number; assistant: number; cost: number };
 }
@@ -207,10 +216,13 @@ export function buildCatalog(live: LiveData, config: ConfigData, runtime: Runtim
 	const toolChars = live.tools.reduce((a, t) => a + t.chars, 0);
 	const baseChars = Math.max(0, live.systemPromptChars - memChars - skillChars);
 	const estTotal = charsToTokens(baseChars + memChars + skillChars + toolChars + live.messages.chars);
-	const authoritative = live.hasTurn && live.usageTokens > 0;
-	const scale = authoritative && estTotal > 0 ? live.usageTokens / estTotal : 1;
+	// After an apply + reload with no reply since, pi's usage still measures the old
+	// prompt: use the calibration saved at apply time on the current configuration.
+	const calibrated = !!live.calibration && live.calibration > 0;
+	const authoritative = !calibrated && live.hasTurn && live.usageTokens > 0;
+	const scale = calibrated ? live.calibration! : authoritative && estTotal > 0 ? live.usageTokens / estTotal : 1;
 	const tok = (chars: number) => charsToTokens(chars) * scale;
-	const total = authoritative ? live.usageTokens : estTotal;
+	const total = authoritative ? live.usageTokens : estTotal * scale;
 
 	const add = (r: Omit<Resource, "diagnostics" | "children"> & Partial<Pick<Resource, "diagnostics" | "children">>) => {
 		const full: Resource = { diagnostics: [], children: [], ...r };
@@ -306,7 +318,7 @@ export function buildCatalog(live: LiveData, config: ConfigData, runtime: Runtim
 	const heavyIds = [...live.messages.heavy]
 		.sort((a, b) => b.chars - a.chars)
 		.slice(0, 5)
-		.map((h, i) => add({ id: `result:${i}`, kind: "result", name: `${h.tool} (turn ${h.turn})`, owner: "", loaded: true, enabled: true, toggleable: false, tokens: tok(h.chars) }).id);
+		.map((h, i) => add({ id: `result:${i}`, kind: "result", name: `${h.tool}${h.detail ? `: ${h.detail}` : ""} (turn ${h.turn})`, owner: "", loaded: true, enabled: true, toggleable: false, tokens: tok(h.chars) }).id);
 
 	// ---- groups ----
 	const byTokens = (ids: string[]) =>
@@ -345,6 +357,7 @@ export function buildCatalog(live: LiveData, config: ConfigData, runtime: Runtim
 			window: live.contextWindow,
 			total,
 			estimated: !authoritative,
+			scale,
 			categories: [
 				{ key: "base", label: "base", tokens: tok(baseChars) },
 				{ key: "memory", label: "memory", tokens: tok(memChars) },

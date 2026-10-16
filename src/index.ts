@@ -14,7 +14,7 @@ import { SettingsManager, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { buildCatalog } from "./catalog";
 import { openInPane } from "./open";
 import { readConfig } from "./sources/config";
-import { readLive } from "./sources/live";
+import { CALIBRATION_TYPE, readLive } from "./sources/live";
 import { readRuntime, watchMcp } from "./sources/runtime";
 import { type SetupResult, SetupView } from "./view/overlay";
 import { type Change, applyChanges } from "./writer";
@@ -77,6 +77,9 @@ export default function piXray(pi: ExtensionAPI) {
 				if (target) changes.push({ target, enabled });
 			}
 			try {
+				// remember how estimates map to real tokens right now: after the reload,
+				// pi's usage total still describes the old prompt until the next reply
+				pi.appendEntry(CALIBRATION_TYPE, { kind: "calibration", scale: catalog.header.scale });
 				await applyAndReload(ctx, changes);
 			} catch (e: any) {
 				ctx.ui.notify(`/xray: could not write settings.json: ${e?.message ?? e}`, "error");

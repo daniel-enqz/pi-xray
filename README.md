@@ -23,7 +23,7 @@ Below it, one row per group, biggest first:
 - `built-in`: pi's own tools and built-in extensions
 - `MCP`: servers from `pi-mcp-adapter`
 - `AGENTS.md / CLAUDE.md`: the context files pi loaded
-- `messages`: the conversation, with the five heaviest tool results
+- `messages`: the conversation, with the five heaviest tool results and the command or file behind each one
 
 Expand a group to see its skills, extensions and prompts, and expand an extension or MCP server to see its tools. Every token is counted in exactly one place, so the groups plus the base prompt add up to the total.
 
@@ -62,6 +62,7 @@ Turning it back on writes `+skills/heavy-skill/SKILL.md`, as `pi config` does.
 - The system prompt is split with `ctx.getSystemPromptOptions()`: context files, skills and the rest.
 - Each skill is measured on its own `<skill>` entry in the prompt pi actually sends, not on the `SKILL.md` file.
 - Tool schemas and messages are estimated at 4 characters per token, then all rows are scaled so they add up to pi's total. Before the first reply there is no total yet, and the card says `estimate`.
+- Right after you apply changes, pi's total still describes the prompt from before the reload, until the next reply. pi-xray then computes the total on the new configuration, with the same scale as before, and marks it `≈`.
 - What will load after a reload comes from pi's own package resolver, the same one `pi config` uses. pi-xray never installs anything.
 
 ## MCP servers

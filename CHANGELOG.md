@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1
+
+- Heavy tool results say what the call did: `bash: npm test (turn 2)`,
+  `read: src/pricing/discounts.ts (turn 1)`, instead of just the tool name.
+- After applying changes, the total no longer sticks to the value from before
+  the reload. pi's usage still describes the old prompt until the next reply, so
+  pi-xray computes the total on the new configuration and marks it `≈`. Before,
+  the removed tokens were spread over the other rows.
+- New demo: a recorded debugging session with AGENTS.md / CLAUDE.md files
+  (`demo/setup.sh`, `demo/make-session.mjs`).
+
 ## 0.1.0
 
 First release.

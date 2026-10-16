@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildCatalog, mcpMode, packageLabel, toggleTarget } from "../src/catalog";
+import { describeCall, findCalibration } from "../src/sources/live";
 import { AGENT, SELF, fixture } from "./fixture";
 
 const build = (opts: Parameters<typeof fixture>[0] = {}) => {
@@ -28,6 +29,33 @@ test("groups + pi base add up to the total: every token counted once", () => {
 	const base = c.header.categories.find((x) => x.key === "base")!.tokens;
 	const groups = c.groups.reduce((a, g) => a + g.tokens, 0);
 	assert.ok(Math.abs(groups + base - 41_200) < 1, `groups ${groups} + base ${base}`);
+});
+
+test("after apply + reload, the saved calibration replaces pi's stale usage total", () => {
+	const fresh = build({ usageTokens: 41_200 });
+	const { live, config, runtime } = fixture({ usageTokens: 41_200 });
+	// one skill was turned off: the current prompt is smaller, pi's usage is not
+	const [removed, ...rest] = live.skills;
+	live.skills = rest;
+	live.systemPromptChars -= removed.chars; // the real prompt shrinks with it
+	live.calibration = fresh.header.scale;
+	const after = buildCatalog(live, config, runtime);
+	assert.equal(after.header.estimated, true, "marked ≈ until the next reply");
+	assert.ok(after.header.total < 41_200, `total should drop, got ${after.header.total}`);
+	const sum = after.header.categories.reduce((a, x) => a + x.tokens, 0);
+	assert.ok(Math.abs(sum - after.header.total) < 1, "rows still add up to the total");
+	const msgs = (c: typeof fresh) => c.header.categories.find((x) => x.key === "messages")!.tokens;
+	assert.ok(Math.abs(msgs(after) - msgs(fresh)) < 1, "messages do not absorb the removed tokens");
+});
+
+test("findCalibration only counts a calibration with no reply after it", () => {
+	const asst = { type: "message", message: { role: "assistant" } };
+	const cal = (scale: number) => ({ type: "custom", customType: "pi-xray", data: { kind: "calibration", scale } });
+	assert.equal(findCalibration([asst, cal(1.8)]), 1.8);
+	assert.equal(findCalibration([asst, cal(1.8), cal(2.1)]), 2.1);
+	assert.equal(findCalibration([cal(1.8), asst]), undefined);
+	assert.equal(findCalibration([asst, cal(0)]), undefined);
+	assert.equal(findCalibration([]), undefined);
 });
 
 test("before the first turn the header is an estimate", () => {
@@ -125,6 +153,22 @@ test("extensions are named after their package, not their source folder", () => 
 	);
 	const names = [...buildCatalog(live, config, runtime).resources.values()].filter((r) => r.path?.startsWith("/n/")).map((r) => r.name);
 	assert.deepEqual(names, ["pi-xray", "pi-web-access", "pi-loadout", "tool", "pi-mcp-adapter"]);
+});
+
+test("heavy tool results say what the call did", () => {
+	const c = build();
+	const names = [...c.resources.values()].filter((r) => r.kind === "result").map((r) => r.name);
+	assert.ok(names.includes("bash: npm test (turn 4)"), names.join(" | "));
+	assert.ok(names.includes("read (turn 2)"), "no detail: just the tool");
+});
+
+test("describeCall picks the meaningful argument", () => {
+	assert.equal(describeCall({ command: "npm test", timeout: 30 }), "npm test");
+	assert.equal(describeCall({ path: "src/a.ts", offset: 10 }), "src/a.ts");
+	assert.equal(describeCall({ server: "jira", tool: "search_issues" }), "search_issues");
+	assert.equal(describeCall({ limit: 5, label: "x" }), "x");
+	assert.equal(describeCall({ n: 1 }), undefined);
+	assert.equal(describeCall(undefined), undefined);
 });
 
 test("package labels", () => {

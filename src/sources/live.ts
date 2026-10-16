@@ -29,6 +29,35 @@ export function skillElementSizes(systemPrompt: string): Map<string, number> {
 	return out;
 }
 
+export const CALIBRATION_TYPE = "pi-xray";
+
+/**
+ * The calibration /xray saved when it last applied changes, if no model reply
+ * happened after it. Entries are in branch order (root to leaf).
+ */
+export function findCalibration(entries: any[]): number | undefined {
+	let found: number | undefined;
+	for (const e of entries) {
+		if (e?.type === "message" && e.message?.role === "assistant") found = undefined;
+		else if (e?.type === "custom" && e.customType === CALIBRATION_TYPE && e.data?.kind === "calibration") {
+			const s = Number(e.data.scale);
+			found = Number.isFinite(s) && s > 0 ? s : undefined;
+		}
+	}
+	return found;
+}
+
+/** One line saying what a tool call did: the bash command, the file path, the query... */
+export function describeCall(args: unknown): string | undefined {
+	if (!args || typeof args !== "object") return undefined;
+	const a = args as Record<string, unknown>;
+	for (const key of ["command", "path", "file_path", "url", "query", "pattern", "tool"]) {
+		if (typeof a[key] === "string" && a[key]) return String(a[key]);
+	}
+	const first = Object.values(a).find((v) => typeof v === "string" && v);
+	return typeof first === "string" ? first : undefined;
+}
+
 function textChars(content: unknown): number {
 	if (typeof content === "string") return content.length;
 	if (!Array.isArray(content)) return 0;
@@ -85,6 +114,7 @@ export function readLive(ctx: ExtensionCommandContext, pi: ExtensionAPI): LiveDa
 	let cost = 0;
 	let turn = 0;
 	const heavy: LiveData["messages"]["heavy"] = [];
+	const calls = new Map<string, string | undefined>(); // toolCallId -> what the call did
 	for (const e of entries) {
 		if (!e || e.type !== "message") {
 			if (e?.type === "compaction") chars += String(e.summary ?? "").length;
@@ -99,15 +129,20 @@ export function readLive(ctx: ExtensionCommandContext, pi: ExtensionAPI): LiveDa
 		} else if (m.role === "assistant") {
 			assistant++;
 			cost += Number(m.usage?.cost?.total ?? 0);
-		} else if (m.role === "toolResult") heavy.push({ tool: String(m.toolName ?? "tool"), turn, chars: n });
+			for (const c of Array.isArray(m.content) ? m.content : [])
+				if (c?.type === "toolCall" || c?.type === "tool_call" || c?.type === "tool_use") calls.set(String(c.id), describeCall(c.arguments ?? c.input ?? c.args));
+		} else if (m.role === "toolResult") heavy.push({ tool: String(m.toolName ?? "tool"), detail: calls.get(String(m.toolCallId)), turn, chars: n });
 	}
 
 	const tokens = Number(usage?.tokens ?? 0);
+	// custom entries are not context entries: read the branch for the calibration
+	const calibration = findCalibration(safe(() => sm.getBranch?.() ?? sm.getEntries?.() ?? [], [] as any[]));
 	return {
 		model: String(model?.id ?? model?.name ?? "?"),
 		contextWindow: Number(usage?.contextWindow ?? model?.contextWindow ?? 0),
 		usageTokens: tokens,
 		hasTurn: tokens > 0 && assistant > 0,
+		calibration,
 		systemPromptChars: sp.length,
 		contextFiles,
 		skills,

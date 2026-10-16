@@ -70,7 +70,7 @@ export function fixture(opts: FixtureOptions = {}): { live: LiveData; config: Co
 			assistant: 9,
 			cost: 1.82,
 			heavy: [
-				{ tool: "bash", turn: 4, chars: 32_000 },
+				{ tool: "bash", detail: "npm test", turn: 4, chars: 32_000 },
 				{ tool: "read", turn: 2, chars: 9_000 },
 				{ tool: "bash\twith\ttabs\nand newline", turn: 5, chars: 100 },
 			],
