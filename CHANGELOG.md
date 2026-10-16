@@ -8,8 +8,8 @@
   the reload. pi's usage still describes the old prompt until the next reply, so
   pi-xray computes the total on the new configuration and marks it `≈`. Before,
   the removed tokens were spread over the other rows.
-- New demo: a recorded debugging session with AGENTS.md / CLAUDE.md files
-  (`demo/setup.sh`, `demo/make-session.mjs`).
+- New demo: a long recorded work session in a sample notes app, with
+  AGENTS.md / CLAUDE.md files (`demo/setup.sh`, `demo/make-session.mjs`).
 
 ## 0.1.0
 

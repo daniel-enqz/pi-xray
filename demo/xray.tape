@@ -1,7 +1,7 @@
 # Records docs/demo.gif with vhs (https://github.com/charmbracelet/vhs).
 #   1. DEMO_MODEL=<provider/model you can use> demo/setup.sh
 #      builds a clean agent dir, a sample project with AGENTS.md/CLAUDE.md files,
-#      and a short debugging session with heavy tool results
+#      and a long work session with heavy tool results
 #   2. run pi once in that agent dir so it installs the packages
 #   3. vhs demo/xray.tape
 Output docs/demo.gif
@@ -15,11 +15,11 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 70ms
 
 Hide
-Type "cd /tmp/pi-xray-demo-work/acme-api && PI_OFFLINE=1 PI_CODING_AGENT_DIR=/tmp/pi-xray-demo pi --continue" Enter
+Type "cd /tmp/pi-xray-demo-work/notes-app && PI_OFFLINE=1 PI_CODING_AGENT_DIR=/tmp/pi-xray-demo pi --continue" Enter
 Sleep 7s
 Show
 
-# mid-session: a debugging conversation just finished
+# mid-session: a long afternoon of work in one conversation
 Sleep 1.5s
 Type "/xray" Sleep 500ms Enter
 Sleep 3s
