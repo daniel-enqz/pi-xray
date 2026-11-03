@@ -14,7 +14,7 @@ Then type `/xray` in any session.
 
 ## What you see
 
-The card at the top is the context window: one stacked bar for the pi base prompt, your `AGENTS.md`/`CLAUDE.md` files, skills, tool schemas and messages. The segments add up to the total pi reports in its footer.
+The card at the top is the context window: one stacked bar for the pi base prompt, your `AGENTS.md`/`CLAUDE.md` files, skills, tool schemas and messages. The segments add up to the total pi reports in its footer. Next to the session cost, the card shows what past compactions cost (`⟳ $2.36 · 2 compactions`) and how many tokens are left before the next one (`169k to compact`).
 
 Below it, one row per group, biggest first:
 

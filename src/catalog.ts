@@ -24,6 +24,14 @@ export type ToggleTarget =
 
 // ---------- input layers ----------
 
+export interface CompactionStats {
+	/** summed cost of every compaction request on the branch */
+	cost: number;
+	count: number;
+	/** context tokens at which auto-compaction fires; undefined when it is off */
+	at?: number;
+}
+
 export interface LiveData {
 	/**
 	 * Tokens per estimated token, saved by /xray when it applied changes. Only set
@@ -39,6 +47,8 @@ export interface LiveData {
 	contextFiles: Array<{ path: string; real: string; chars: number }>;
 	skills: Array<{ name: string; filePath: string; real: string; chars: number }>;
 	tools: Array<{ name: string; chars: number; source: string; path: string; real: string }>;
+	/** compactions on this branch (all of them, not only the last) and where the next one fires */
+	compaction?: CompactionStats;
 	messages: {
 		chars: number;
 		user: number;
@@ -123,6 +133,8 @@ export interface Header {
 	scale: number;
 	categories: Array<{ key: string; label: string; tokens: number }>;
 	messages: { user: number; assistant: number; cost: number };
+	/** cost/count of past compactions, and tokens left before the next one */
+	compaction: { cost: number; count: number; left?: number };
 }
 
 export interface Catalog {
@@ -366,6 +378,11 @@ export function buildCatalog(live: LiveData, config: ConfigData, runtime: Runtim
 				{ key: "messages", label: "msgs", tokens: tok(live.messages.chars) },
 			],
 			messages: { user: live.messages.user, assistant: live.messages.assistant, cost: live.messages.cost },
+			compaction: {
+				cost: live.compaction?.cost ?? 0,
+				count: live.compaction?.count ?? 0,
+				left: live.compaction?.at != null ? Math.max(0, Math.round(live.compaction.at - total)) : undefined,
+			},
 		},
 		settingsPath: tilde(path.join(config.agentDir, "settings.json")),
 		resources,

@@ -6,7 +6,7 @@
  */
 import * as fs from "node:fs";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import type { LiveData } from "../catalog";
+import type { CompactionStats, LiveData } from "../catalog";
 
 export function realpath(p: string): string {
 	try {
@@ -45,6 +45,31 @@ export function findCalibration(entries: any[]): number | undefined {
 		}
 	}
 	return found;
+}
+
+const DEFAULT_RESERVE_TOKENS = 16_384; // pi's default (docs/compaction.md)
+
+/**
+ * Every compaction on the branch (its summary request is billed too, and it is not an
+ * assistant message) plus the point where the next auto-compaction fires:
+ * contextWindow - reserveTokens, with compaction.modelOverrides["provider/id"] first.
+ */
+export function compactionStats(branch: any[], settings: any, model: any, contextWindow: number): CompactionStats {
+	let cost = 0;
+	let count = 0;
+	for (const e of branch) {
+		if (e?.type !== "compaction") continue;
+		count++;
+		cost += Number(e.usage?.cost?.total ?? 0) || 0;
+	}
+	const c = settings?.compaction;
+	let at: number | undefined;
+	if (contextWindow > 0 && c?.enabled !== false) {
+		const key = model ? `${model.provider}/${model.id}` : "";
+		const reserve = Number(c?.modelOverrides?.[key]?.reserveTokens ?? c?.reserveTokens ?? DEFAULT_RESERVE_TOKENS);
+		at = Math.max(0, contextWindow - reserve);
+	}
+	return { cost, count, at };
 }
 
 /** One line saying what a tool call did: the bash command, the file path, the query... */
@@ -136,10 +161,14 @@ export function readLive(ctx: ExtensionCommandContext, pi: ExtensionAPI): LiveDa
 
 	const tokens = Number(usage?.tokens ?? 0);
 	// custom entries are not context entries: read the branch for the calibration
-	const calibration = findCalibration(safe(() => sm.getBranch?.() ?? sm.getEntries?.() ?? [], [] as any[]));
+	const branch = safe(() => sm.getBranch?.() ?? sm.getEntries?.() ?? [], [] as any[]);
+	const calibration = findCalibration(branch);
+	const contextWindow = Number(usage?.contextWindow ?? model?.contextWindow ?? 0);
+	const compaction = compactionStats(branch, safe(() => (pi as any).getSettings?.(), undefined), model, contextWindow);
 	return {
 		model: String(model?.id ?? model?.name ?? "?"),
-		contextWindow: Number(usage?.contextWindow ?? model?.contextWindow ?? 0),
+		contextWindow,
+		compaction,
 		usageTokens: tokens,
 		hasTurn: tokens > 0 && assistant > 0,
 		calibration,

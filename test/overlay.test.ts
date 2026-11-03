@@ -288,3 +288,18 @@ test("too small terminal shows a message instead of the table", () => {
 	check(lines, 30, 8, "too small");
 	assert.match(lines.join("\n"), /needs/);
 });
+
+test("the card shows compaction cost and tokens left, and fits the width", () => {
+	const { live, config, runtime } = fixture();
+	live.compaction = { cost: 2.36, count: 2, at: 280_000 };
+	const catalog = buildCatalog(live, config, runtime);
+	const view = new SetupView({ terminal: { rows: 30 }, requestRender() {} }, makeTheme(30), catalog, () => {}, { open: () => "" });
+	const plain = (l: string) => l.replace(/\x1b\[[0-9;]*m/g, "");
+	const wide = view.render(200).map(plain).join("\n");
+	assert.match(wide, /⟳ \$2\.36 · 2 compactions/);
+	assert.match(wide, /238\.8k to compact/);
+	for (const width of [40, 80]) for (const l of view.render(width)) assert.equal(visibleWidth(l), width, `line width at ${width}`);
+	delete live.compaction;
+	const none = new SetupView({ terminal: { rows: 30 }, requestRender() {} }, makeTheme(30), buildCatalog(live, config, runtime), () => {}, { open: () => "" });
+	assert.doesNotMatch(none.render(200).map(plain).join("\n"), /compact/);
+});

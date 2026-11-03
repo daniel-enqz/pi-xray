@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildCatalog, mcpMode, packageLabel, toggleTarget } from "../src/catalog";
-import { describeCall, findCalibration } from "../src/sources/live";
+import { compactionStats, describeCall, findCalibration } from "../src/sources/live";
 import { AGENT, SELF, fixture } from "./fixture";
 
 const build = (opts: Parameters<typeof fixture>[0] = {}) => {
@@ -56,6 +56,29 @@ test("findCalibration only counts a calibration with no reply after it", () => {
 	assert.equal(findCalibration([cal(1.8), asst]), undefined);
 	assert.equal(findCalibration([asst, cal(0)]), undefined);
 	assert.equal(findCalibration([]), undefined);
+});
+
+test("compactionStats sums every compaction and finds the compaction point", () => {
+	const comp = (total?: number) => ({ type: "compaction", usage: total == null ? undefined : { cost: { total } } });
+	const branch = [comp(1.2), { type: "message", message: { role: "assistant" } }, comp(1.16), comp()];
+	const model = { provider: "anthropic", id: "opus" };
+	const settings = { compaction: { reserveTokens: 50_000, modelOverrides: { "anthropic/opus": { reserveTokens: 720_000 } } } };
+	const s = compactionStats(branch, settings, model, 1_000_000);
+	assert.equal(s.count, 3);
+	assert.equal(Number(s.cost.toFixed(2)), 2.36);
+	assert.equal(s.at, 280_000);
+	assert.equal(compactionStats([], { compaction: { reserveTokens: 50_000 } }, { provider: "x", id: "y" }, 200_000).at, 150_000);
+	assert.equal(compactionStats([], undefined, model, 200_000).at, 200_000 - 16_384, "pi's default reserve");
+	assert.equal(compactionStats([], { compaction: { enabled: false } }, model, 200_000).at, undefined);
+});
+
+test("header shows tokens left before auto-compaction", () => {
+	const { live, config, runtime } = fixture();
+	live.compaction = { cost: 2.36, count: 2, at: 280_000 };
+	const h = buildCatalog(live, config, runtime).header;
+	assert.deepEqual(h.compaction, { cost: 2.36, count: 2, left: 280_000 - live.usageTokens });
+	delete live.compaction;
+	assert.deepEqual(buildCatalog(live, config, runtime).header.compaction, { cost: 0, count: 0, left: undefined });
 });
 
 test("before the first turn the header is an estimate", () => {

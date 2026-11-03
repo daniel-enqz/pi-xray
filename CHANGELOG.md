@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- The card shows compactions: `⟳ $2.36 · 2 compactions` is the summed cost of every
+  compaction on the branch, and `169k to compact` is how many tokens are left before
+  auto-compaction fires (contextWindow minus `compaction.reserveTokens`, with
+  `compaction.modelOverrides["provider/id"]` first). The second one turns yellow in
+  the last 10%.
+
 ## 0.1.1
 
 - Heavy tool results say what the call did: `bash: npm test (turn 2)`,

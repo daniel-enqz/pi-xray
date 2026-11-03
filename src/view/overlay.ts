@@ -357,6 +357,13 @@ export class SetupView {
 			[["dim", `${h.messages.user + h.messages.assistant} msgs`]],
 			[["dim", `$${h.messages.cost.toFixed(2)}`]],
 		];
+		const k = h.compaction;
+		if (k.count) summary.push([["dim", `⟳ $${k.cost.toFixed(2)} · ${k.count} ${k.count === 1 ? "compaction" : "compactions"}`]]);
+		if (k.left != null && h.window) {
+			// warn in the last 10% before auto-compaction (left + total is the compaction point)
+			const near = k.left <= (k.left + h.total) * 0.1;
+			summary.push([[near ? "warning" : "dim", `${human(k.left)} to compact`]]);
+		}
 		if (h.estimated) summary.push([["warning", "estimate"]]);
 		summary.push([["dim", `${c.packages} packages`]], [["dim", `${c.skills} skills`]], [["dim", `${c.extensions} extensions`]]);
 
